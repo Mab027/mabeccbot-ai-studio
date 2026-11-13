@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /privacy.html
+Disallow: /terms.html
+Disallow: /refunds.html
+
+Sitemap: https://mabeccbot-ai-studio.pages.dev/sitemap.xml

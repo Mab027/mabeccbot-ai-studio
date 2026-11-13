@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TikTok authorisation — MabeccBot AI Studio</title>
+<meta name="description" content="Completes the TikTok authorisation handshake for MabeccBot AI Studio.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="container nav">
+    <a class="brand" href="index.html"><span class="brand-mark">M</span><span>MabeccBot <span class="brand-ai">AI Studio</span></span></a>
+  </div>
+</header>
+
+<main id="main">
+  <section class="section">
+    <div class="container" style="max-width:720px">
+
+      <span class="eyebrow">TikTok authorisation</span>
+
+      <!-- STATE: working -->
+      <div id="state-wait" class="card">
+        <h1 style="margin-top:0">Checking the authorisation response…</h1>
+        <p class="note">One moment. This page is reading the response TikTok sent back.</p>
+      </div>
+
+      <!-- STATE: success -->
+      <div id="state-ok" class="card" hidden>
+        <h1 style="margin-top:0">Authorisation approved</h1>
+        <p>TikTok returned an authorisation code. Copy it and send it to MabeccBot so the
+           connection can be completed on the server.</p>
+
+        <div class="notice">
+          <strong>This code is short-lived.</strong> It expires in about ten minutes and can
+          only be used once. If it expires, start the authorisation again.
+        </div>
+
+        <label class="field" for="auth-code"><span>Authorisation code</span></label>
+        <textarea id="auth-code" rows="4" readonly
+          style="width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;padding:12px;border-radius:10px;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text);resize:vertical"
+          aria-label="Authorisation code"></textarea>
+
+        <div class="btn-row" style="margin-top:14px">
+          <button id="copy-btn" class="btn btn-primary" type="button">Copy code</button>
+          <a class="btn btn-ghost" href="index.html">Back to site</a>
+        </div>
+
+        <p id="copy-note" class="form-hint" role="status" aria-live="polite"></p>
+
+        <hr class="divider">
+        <p class="note">Optional details returned with the code:</p>
+        <p class="note" id="meta-line">—</p>
+      </div>
+
+      <!-- STATE: error -->
+      <div id="state-err" class="card" hidden>
+        <h1 style="margin-top:0">Authorisation did not complete</h1>
+        <p>TikTok did not return an authorisation code, so nothing was connected.</p>
+
+        <div class="notice" id="err-box">
+          <strong>Reason reported by TikTok:</strong>
+          <span id="err-text">Unknown error.</span>
+        </div>
+
+        <p class="note">Nothing was changed on this site or on your TikTok account. You can
+           close this page and try again from the beginning.</p>
+
+        <div class="btn-row">
+          <a class="btn btn-ghost" href="index.html">Back to site</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-bottom">
+    <span>© <span id="yr">2026</span> MabeccBot AI Studio</span>
+    <span><a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get("code");
+  var error = params.get("error");
+  var errorDesc = params.get("error_description");
+  var scopes = params.get("scopes");
+  var state = params.get("state");
+
+  // Strip the query string from the address bar and history immediately, so the
+  // code does not linger in browser history, screenshots or shared links.
+  if (window.location.search) {
+    try {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } catch (e) { /* non-fatal */ }
+  }
+
+  document.getElementById("yr").textContent = new Date().getFullYear();
+
+  var elWait = document.getElementById("state-wait");
+  var elOk = document.getElementById("state-ok");
+  var elErr = document.getElementById("state-err");
+
+  function show(el) {
+    elWait.hidden = true;
+    elOk.hidden = true;
+    elErr.hidden = true;
+    el.hidden = false;
+  }
+
+  if (error) {
+    // textContent, never innerHTML: the value comes from the URL and must not be parsed as markup
+    var msg = errorDesc ? (errorDesc + " (" + error + ")") : error;
+    document.getElementById("err-text").textContent = msg;
+    show(elErr);
+    return;
+  }
+
+  if (!code) {
+    document.getElementById("err-text").textContent =
+      "No authorisation code was present in the link. It may have expired, or the page may have been opened directly.";
+    show(elErr);
+    return;
+  }
+
+  var box = document.getElementById("auth-code");
+  box.value = code;
+
+  var bits = [];
+  if (scopes) { bits.push("scopes: " + scopes); }
+  if (state) { bits.push("state: " + state); }
+  bits.push("length: " + code.length + " characters");
+  document.getElementById("meta-line").textContent = bits.join(" · ");
+
+  show(elOk);
+
+  var btn = document.getElementById("copy-btn");
+  var note = document.getElementById("copy-note");
+
+  btn.addEventListener("click", function () {
+    function done(okText) {
+      note.textContent = okText;
+      window.setTimeout(function () { note.textContent = ""; }, 4000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(function () {
+        done("Copied. You can paste it into your chat with MabeccBot.");
+      }).catch(function () {
+        box.select();
+        done("Copy blocked by the browser — the text is selected, copy it manually.");
+      });
+    } else {
+      box.select();
+      try { document.execCommand("copy"); done("Copied."); }
+      catch (e) { done("Copy blocked — the text is selected, copy it manually."); }
+    }
+  });
+})();
+</script>
+</body>
+</html>
